@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import Image from "next/image"
@@ -16,32 +15,27 @@ import {
   Clock,
   Bookmark,
   Share2,
-  BookMarked, // Changed from BookmarkCheck based on error suggestion
+  BookMarked,
   ArrowRight,
   User,
 } from "lucide-react"
-import { useSession } from "next-auth/react" // For user authentication
+import { useSession } from "next-auth/react"
 import { Toast } from "@/components/ui/toast"
+import type { NewsItem } from "@/lib/news"
 
-// Define interface for news item
-interface NewsItem {
+// Define interface for news item to be sent to HeroSection
+interface HeroNewsItem {
   id: number;
   title: string;
   summary: string;
   image: string;
   category: string;
-  date: string;
   slug: string;
-  views: number;
-  isRead: boolean;
-  articleId?: string; // MongoDB _id for the article
-  articleCount?: number; 
-  sourceCount?: number;
-  isBookmarked?: boolean;
-  size?: string; // small, medium, large for different card sizes
-  type?: string; // article, stocks, trending, newsletter
-  readTime?: string;
-  images?: string[]; // Add the new images array property
+}
+
+// Props interface for NewsGrid component
+interface NewsGridProps {
+  initialNewsItems: NewsItem[];
 }
 
 // Add this interface near the top of the file with other interfaces
@@ -55,83 +49,7 @@ interface SearchResult {
 }
 
 // Sample news data
-const initialNewsItems = [
-  {
-    id: 1,
-    title: "FKKKKKKKKKKK Global Markets React to Economic Policy Shifts",
-    summary:
-      "Stock markets worldwide show mixed reactions to the latest economic policy announcements. Analysts predict continued volatility as investors adjust to the new landscape. Central banks are closely monitoring the situation and may intervene if necessary. The impact on emerging markets has been particularly pronounced, with several currencies experiencing significant fluctuations against the dollar. Investors are advised to maintain diversified portfolios during this period of uncertainty.",
-    image: "/placeholder.svg?height=400&width=600",
-    category: "Business",
-    date: "2023-03-15",
-    slug: "global-markets-react",
-    views: 1243,
-    isRead: false,
-    articleId: "sample_1", // Combined sample ID format
-  },
-  {
-    id: 2,
-    title: "New Study Reveals Benefits of Mediterranean Diet",
-    summary:
-      "Research confirms significant health benefits for those following a traditional Mediterranean diet. The study tracked participants over a five-year period and found reduced risks of heart disease, stroke, and certain cancers. Olive oil, fish, and fresh vegetables were identified as key components. The research team, led by renowned nutritionist Dr. Elena Papadakis, emphasized that consistency was more important than strict adherence. Participants who followed the diet moderately but regularly showed better outcomes than those who followed it perfectly but intermittently.",
-    image: "/placeholder.svg?height=400&width=600",
-    category: "Health",
-    date: "2023-03-14",
-    slug: "mediterranean-diet-benefits",
-    views: 876,
-    isRead: false,
-    articleId: "sample_2", // Combined sample ID format
-  },
-  {
-    id: 3,
-    title: "Major Sports League Announces Expansion Teams",
-    summary:
-      "Two new cities will join the league in the upcoming season, bringing the total to 32 teams. The expansion represents a significant investment in growing markets and will create thousands of new jobs. Team names and logos will be revealed at a special event next month. League commissioner Janet Wilson described the expansion as 'a historic moment for the sport' and promised fans in the new cities an 'unforgettable inaugural season.' The expansion draft is scheduled for July, with existing teams allowed to protect up to 15 players from selection.",
-    image: "/placeholder.svg?height=400&width=600",
-    category: "Sports",
-    date: "2023-03-14",
-    slug: "sports-league-expansion",
-    views: 654,
-    isRead: false,
-    articleId: "sample_3", // Combined sample ID format
-  },
-  {
-    id: 4,
-    title: "Tech Company Unveils Next-Generation Smartphone",
-    summary:
-      "The latest flagship device features groundbreaking camera technology and extended battery life. Industry experts are calling it a significant leap forward in mobile technology. Pre-orders have already broken previous records, indicating strong consumer interest despite the premium price point. The new device incorporates a revolutionary sensor that can capture clear images in near-darkness, potentially eliminating the need for flash photography in most situations. Battery improvements allow for up to 72 hours of normal use between charges, addressing a common pain point for smartphone users.",
-    image: "/placeholder.svg?height=400&width=600",
-    category: "Technology",
-    date: "2023-03-13",
-    slug: "next-gen-smartphone",
-    views: 2105,
-    isRead: false,
-  },
-  {
-    id: 5,
-    title: "Environmental Initiative Aims to Clean Ocean Plastic",
-    summary:
-      "A new global partnership launches ambitious project to remove plastic waste from the world's oceans. Using innovative collection methods and recycling technologies, the initiative aims to remove millions of tons of plastic over the next decade. Corporate sponsors have pledged significant funding to support the effort. The project will deploy a fleet of specialized vessels equipped with advanced filtration systems that can collect microplastics without harming marine life. Collected plastic will be processed and transformed into construction materials for affordable housing projects in coastal communities.",
-    image: "/placeholder.svg?height=400&width=600",
-    category: "Science",
-    date: "2023-03-12",
-    slug: "ocean-plastic-initiative",
-    views: 932,
-    isRead: false,
-  },
-  {
-    id: 6,
-    title: "Award-Winning Film Director Announces New Project",
-    summary:
-      "The acclaimed filmmaker returns with an ambitious new movie starring A-list actors. Set to begin production next month, the film explores themes of identity and belonging in a near-future setting. Studio executives are already generating Oscar buzz based on the screenplay and attached talent. The project reunites the director with cinematographer Lucia Chen, with whom she collaborated on her Academy Award-winning previous film. Filming will take place across three continents, with principal photography expected to last approximately four months.",
-    image: "/placeholder.svg?height=400&width=600",
-    category: "Entertainment",
-    date: "2023-03-11",
-    slug: "film-director-new-project",
-    views: 1567,
-    isRead: false,
-  },
-]
+
 
 // Encouraging messages for read completion
 const encouragingMessages = [
@@ -164,7 +82,7 @@ declare global {
   }
 }
 
-export default function NewsGrid() {
+export default function NewsGrid({ initialNewsItems }: NewsGridProps) {
   const [newsItems, setNewsItems] = useState<NewsItem[]>(initialNewsItems)
   const [expandedCardId, setExpandedCardId] = useState<number | null>(null)
   const expandedCardRef = useRef<HTMLDivElement>(null)
@@ -213,224 +131,70 @@ export default function NewsGrid() {
     }
   }, [newsItems]);
 
-  // Load news items from envisage_web collection and check user interaction history
+  // Check user interaction history and update read status for initial news items
   useEffect(() => {
-    async function loadNewsAndCheckReadStatus() {
-      console.log('🔄 news-grid: Loading news items from envisage_web and checking read status');
+    async function checkUserReadStatus() {
+      console.log('🔄 news-grid: Checking user interaction history for initial news items');
+      
+      // If no user is logged in, keep the initial items as they are
+      if (!userId) {
+        console.log('👤 news-grid: No user logged in, keeping initial news items');
+        return;
+      }
       
       try {
-        // Step 1: Load all news items from envisage_web collection
-        let allNewsItems: NewsItem[] = [];
-        let readArticleIds = new Map<string, Set<number>>(); // Changed to Map<documentId, Set<newsItemIds>>
+        let readArticleIds = new Map<string, Set<number>>();
         
-        try {
-          // Fetch news items from envisage_web collection
-          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:3001'}/api/envisage_web`);
-          if (response.ok) {
-            const result = await response.json();
-            console.log(`✅ news-grid: Loaded envisage_web data`);
-            
-            // DEBUG: Print the full envisage_web document
-            console.log('📋 DEBUG - Full envisage_web document:', result);
-            
-            // Find the date key
-            const dateKey = result.envisage_web ? Object.keys(result.envisage_web)[0] : null;
-
-            // Check if the data contains newsItems array
-            if (dateKey && result.envisage_web && result.envisage_web[dateKey] && result.envisage_web[dateKey].newsItems && Array.isArray(result.envisage_web[dateKey].newsItems)) {
-              // DEBUG: Print the newsItems array
-              console.log('📊 DEBUG - News items array:', result.envisage_web[dateKey].newsItems);
-              
-              // Fixed issue with articleId assignment - get the correct document ID from the top level
-              // The document ID is directly in the result object, not in the dateKey object
-              const documentId = result._id;
-              console.log('🔑 DEBUG - Document ID from top level that should be used as articleId base:', documentId);
+        // Fetch user interaction history
+        console.log('👤 news-grid: Checking user interaction history');
+        const interactionsUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:3001'}/api/users/${userId}/interactions`;
+        const interactionsResponse = await fetch(interactionsUrl);
+        
+        if (interactionsResponse.ok) {
+          const interactionsData = await interactionsResponse.json();
+          console.log('👤 DEBUG - Received user interactions:', interactionsData);
+          
+          // Process each interaction
+          if (interactionsData.interactions && Array.isArray(interactionsData.interactions)) {
+            interactionsData.interactions.forEach((interaction: any) => {
+              // Extract the document ID
+              const documentId = interaction.documentId || String(interaction.articleId);
               
               if (!documentId) {
-                console.error('❌ DEBUG - Missing document _id in API response. Cannot assign articleId to news items');
-                console.log('📋 DEBUG - Full result structure for troubleshooting:', 
-                  JSON.stringify({
-                    hasId: !!result._id,
-                    topLevelKeys: Object.keys(result),
-                    resultStructure: Object.keys(result).reduce((acc, key) => ({
-                      ...acc,
-                      [key]: typeof result[key]
-                    }), {})
-                  }                  )
-                );
+                console.log('⚠️ DEBUG - Interaction missing document ID:', interaction);
+                return;
               }
               
-              // Map the newsItems data to our NewsItem format with combined articleId
-              allNewsItems = result.envisage_web[dateKey].newsItems.map((item: any, index: number) => {
-                // Create a combined articleId using document ID and news item ID
-                const combinedArticleId = documentId ? `${documentId}_${item.id}` : `fallback-id_${item.id}`;
-                
-                // Assign size based on index for visual variety
-                const sizeOptions = ["tiny", "small", "medium", "large", "wide", "tall"];
-                const size = sizeOptions[Math.floor(Math.random() * sizeOptions.length)];
-                
-                // Select image: Use random image from 'images' array if available, else fallback
-                let selectedImage = item.image || "/placeholder.svg?height=400&width=600"; // Default fallback
-                if (item.images && Array.isArray(item.images) && item.images.length > 0) {
-                  const randomIndex = Math.floor(Math.random() * item.images.length);
-                  selectedImage = item.images[randomIndex];
-                  console.log(`🖼️ DEBUG - Using random image from 'images' array for item ${item.id}: ${selectedImage}`);
-                } else {
-                  console.log(`⚠️ DEBUG - No 'images' array found or empty for item ${item.id}, using fallback: ${selectedImage}`);
-                }
-
-                const newsItem = {
-                  id: item.id,
-                  title: item.title,
-                  summary: item.summary || "",
-                  image: selectedImage, // Use the selected image URL
-                  category: item.category,
-                  date: item.date,
-                  slug: item.slug,
-                  views: item.views || 0,
-                  isRead: false,
-                  articleId: combinedArticleId, // Use combined ID format
-                  articleCount: item.articleCount,
-                  sourceCount: item.sourceCount,
-                  isBookmarked: false,
-                  size: size,
-                  type: "article",
-                  readTime: `${Math.floor((item.summary || "").length / 1000) + 1} min`,
-                  images: item.images // Store the original images array if needed later
-                };
-                
-                console.log(`📋 DEBUG - Created news item ${item.id} with combined articleId: ${newsItem.articleId}`);
-                return newsItem;
-              });
+              // Initialize the Set for this document if needed
+              if (!readArticleIds.has(documentId)) {
+                readArticleIds.set(documentId, new Set<number>());
+              }
               
-              console.log(`📊 news-grid: Processed ${allNewsItems.length} news items from envisage_web`);
-              
-              // DEBUG: Print the unique articleIds created
-              console.log('🔑 DEBUG - Generated articleIds:', allNewsItems.map(item => ({
-                id: item.id,
-                articleId: item.articleId
-              })));
-            } else {
-              console.error('❌ news-grid: Invalid data structure in envisage_web');
-              
-              // DEBUG: Print what we received to help diagnose the problem
-              console.log('❌ DEBUG - Invalid envisage_web structure received:', {
-                hasResult: !!result,
-                resultType: typeof result,
-                hasEnvisageWeb: !!result.envisage_web,
-                dateKey: dateKey,
-                hasNewsItems: !!(result.envisage_web && dateKey && result.envisage_web[dateKey].newsItems),
-                newsItemsType: result.envisage_web && dateKey && result.envisage_web[dateKey] ? typeof result.envisage_web[dateKey].newsItems : 'undefined',
-                isArray: !!(result.envisage_web && dateKey && result.envisage_web[dateKey].newsItems && Array.isArray(result.envisage_web[dateKey].newsItems))
-              });
-              
-              // Fix the syntax error by properly closing the parentheses
-              console.log('📋 DEBUG - Full result structure for troubleshooting:', 
-                JSON.stringify({
-                  hasId: !!result._id,
-                  topLevelKeys: Object.keys(result),
-                  resultStructure: Object.keys(result).reduce((acc, key) => ({
-                    ...acc,
-                    [key]: typeof result[key]
-                  }), {})
-                }                )
-              );
-            }
-          } else {
-            console.error(`❌ news-grid: Error fetching envisage_web - Status: ${response.status}`);
-            const errorText = await response.text();
-            console.error('❌ DEBUG - Error response text:', errorText);
-          }
-        } catch (error) {
-          console.error('❌ news-grid: Error loading news from envisage_web:', error);
-          
-          // Fallback to sample data BUT ensure they all have articleIds
-          allNewsItems = initialNewsItems.map((item: NewsItem, index: number) => { // Explicitly type 'item' as NewsItem
-            // Assign size based on index for visual variety
-            const sizeOptions = ["tiny", "small", "medium", "large", "wide", "tall"];
-            const size = sizeOptions[Math.floor(Math.random() * sizeOptions.length)];
-            
-            // Select image for fallback data (use existing logic)
-            let selectedImage = item.image || "/placeholder.svg?height=400&width=600";
-            // This check should now be type-safe
-            if (item.images && Array.isArray(item.images) && item.images.length > 0) {
-              const randomIndex = Math.floor(Math.random() * item.images.length);
-              selectedImage = item.images[randomIndex];
-            }
-
-            return {
-              ...item,
-              image: selectedImage, // Use selected image for fallback too
-              articleId: item.articleId || `sample-article-id-${item.id}`, // Ensure every sample item has an articleId
-              isBookmarked: false,
-              size: item.size || size,
-              type: item.type || "article",
-              readTime: item.readTime || `${Math.floor((item.summary || "").length / 300) + 2} min`
-            };
-          });
-          
-          console.log('⚠️ news-grid: Using sample news items as fallback with articleIds:', 
-            allNewsItems.map(item => ({ id: item.id, articleId: item.articleId }))
-          );
-        }
-        
-        // Step 2: If user is logged in, check interaction history using updated schema
-        if (userId) {
-          try {
-            console.log('👤 news-grid: Checking user interaction history');
-            const interactionsUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:3001'}/api/users/${userId}/interactions`;
-            const interactionsResponse = await fetch(interactionsUrl);
-            
-            if (interactionsResponse.ok) {
-              const interactionsData = await interactionsResponse.json();
-              console.log('👤 DEBUG - Received user interactions:', interactionsData);
-              
-              // Process each interaction
-              if (interactionsData.interactions && Array.isArray(interactionsData.interactions)) {
-                interactionsData.interactions.forEach((interaction: any) => {
-                  // Extract the document ID
-                  const documentId = interaction.documentId || String(interaction.articleId);
-                  
-                  if (!documentId) {
-                    console.log('⚠️ DEBUG - Interaction missing document ID:', interaction);
-                    return;
-                  }
-                  
-                  // Initialize the Set for this document if needed
-                  if (!readArticleIds.has(documentId)) {
-                    readArticleIds.set(documentId, new Set<number>());
-                  }
-                  
-                  // Check the newsItems array for completed items
-                  if (interaction.newsItems && Array.isArray(interaction.newsItems)) {
-                    interaction.newsItems.forEach((newsItem: any) => {
-                      if (newsItem.completed && newsItem.newsItemId !== undefined) {
-                        // Add the newsItemId to the set for this document
-                        const newsItemSet = readArticleIds.get(documentId)!;
-                        newsItemSet.add(Number(newsItem.newsItemId));
-                        
-                        console.log(`🔍 DEBUG - Marked newsItem ${newsItem.newsItemId} in document ${documentId} as read`);
-                      }
-                    });
-                  } else {
-                    console.log(`⚠️ DEBUG - Interaction for document ${documentId} has no newsItems array`);
+              // Check the newsItems array for completed items
+              if (interaction.newsItems && Array.isArray(interaction.newsItems)) {
+                interaction.newsItems.forEach((newsItem: any) => {
+                  if (newsItem.completed && newsItem.newsItemId !== undefined) {
+                    // Add the newsItemId to the set for this document
+                    const newsItemSet = readArticleIds.get(documentId)!;
+                    newsItemSet.add(Number(newsItem.newsItemId));
+                    
+                    console.log(`🔍 DEBUG - Marked newsItem ${newsItem.newsItemId} in document ${documentId} as read`);
                   }
                 });
+              } else {
+                console.log(`⚠️ DEBUG - Interaction for document ${documentId} has no newsItems array`);
               }
-              
-              // Log all read items for debugging
-              readArticleIds.forEach((itemIds, docId) => {
-                console.log(`✅ Document ${docId} has ${itemIds.size} read news items:`, Array.from(itemIds));
-              });
-            }
-          } catch (error) {
-            console.error('❌ news-grid: Error fetching user interactions:', error);
+            });
           }
+          
+          // Log all read items for debugging
+          readArticleIds.forEach((itemIds, docId) => {
+            console.log(`✅ Document ${docId} has ${itemIds.size} read news items:`, Array.from(itemIds));
+          });
         }
         
-        // Step 3: Mark articles as read based on user history with new structure
-        const processedNewsItems = allNewsItems.map(item => {
-          // For each news item, check if it's been read
+        // Update news items with read status based on user history
+        const updatedNewsItems = newsItems.map(item => {
           let isItemRead = false;
           
           if (item.articleId) {
@@ -455,73 +219,21 @@ export default function NewsGrid() {
         });
         
         // Sort items - unread first, read at the bottom
-        processedNewsItems.sort((a, b) => {
+        const sortedItems = updatedNewsItems.sort((a, b) => {
           if (a.isRead === b.isRead) return 0;
           return a.isRead ? 1 : -1;
         });
         
-        // Before setting state, verify no items have undefined articleIds
-        const itemsWithoutArticleId = processedNewsItems.filter(item => !item.articleId);
-        if (itemsWithoutArticleId.length > 0) {
-          console.error('❌ DEBUG - Some news items are missing articleId:', itemsWithoutArticleId);
-          
-          // Fix any items without articleId
-          processedNewsItems.forEach(item => {
-            if (!item.articleId) {
-              item.articleId = `emergency-fallback-id-${item.id}`;
-              console.log(`🔧 DEBUG - Applied emergency fallback articleId to item ${item.id}: ${item.articleId}`);
-            }
-          });
-        }
+        console.log(`📊 news-grid: Updated ${sortedItems.length} news items with user read status`);
+        setNewsItems(sortedItems);
         
-        console.log(`📊 news-grid: Final news list has ${processedNewsItems.length} items (${processedNewsItems.filter(i => i.isRead).length} read)`);
-        console.log('📋 DEBUG - Final news items with articleIds:', 
-          processedNewsItems.map(item => ({ id: item.id, title: item.title.substring(0, 20), articleId: item.articleId, isRead: item.isRead }))
-        );
-        
-        setNewsItems(processedNewsItems);
-        
-        // **** ADDED: Dispatch event with hero news ****
-        try {
-          // Filter items that have a valid image URL (not placeholder or empty)
-          const itemsWithImages = processedNewsItems.filter(item => item.image && !item.image.includes('placeholder.svg'));
-
-          if (itemsWithImages.length > 0) {
-            // Shuffle the array and take the first 5 (or fewer if less than 5 available)
-            const shuffled = itemsWithImages.sort(() => 0.5 - Math.random());
-            const heroNewsData = shuffled.slice(0, 5).map(item => ({
-              id: item.id, // Use the original news item ID
-              title: item.title,
-              summary: item.summary.split('\n\n')[0], // Take first paragraph for summary
-              image: item.image,
-              category: item.category,
-              slug: item.slug,
-            }));
-
-            console.log(`🦸 news-grid: Selected ${heroNewsData.length} items for Hero section:`, heroNewsData.map(n => n.slug));
-
-            // Dispatch the custom event with the selected news data
-            const heroEvent = new CustomEvent<HeroNewsItem[]>('heroNewsLoaded', { detail: heroNewsData });
-            document.dispatchEvent(heroEvent);
-            console.log('🔔 news-grid: Dispatched heroNewsLoaded event.');
-          } else {
-            console.warn('⚠️ news-grid: No suitable news items with images found for Hero section.');
-            // Optionally dispatch an empty array or default data
-             const heroEvent = new CustomEvent<HeroNewsItem[]>('heroNewsLoaded', { detail: [] });
-             document.dispatchEvent(heroEvent);
-          }
-        } catch (dispatchError) {
-           console.error('❌ news-grid: Error preparing or dispatching hero news event:', dispatchError);
-        }
-        // **** END ADDED ****
-
       } catch (error) {
-        console.error('❌ news-grid: Error in loadNewsAndCheckReadStatus:', error);
+        console.error('❌ news-grid: Error checking user interaction history:', error);
       }
     }
     
-    loadNewsAndCheckReadStatus();
-  }, [userId]); // Re-run when userId changes (login/logout)
+    checkUserReadStatus();
+  }, [userId, newsItems.length]); // Only run when userId changes or when newsItems are initially loaded
 
 // Record article interaction in the database - modified to use new newsItems array structure
 const recordArticleInteraction = async (articleId: string, completed: boolean) => {

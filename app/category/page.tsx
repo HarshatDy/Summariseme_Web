@@ -2,6 +2,7 @@ import { notFound } from "next/navigation"
 import NewsGrid from "@/components/news-grid"
 import Sidebar from "@/components/sidebar"
 import { Button } from "@/components/ui/button"
+import { getNewsItems } from "@/lib/news"
 
 // Sample categories data
 const validCategories = ["politics", "technology", "business", "sports", "entertainment", "science", "health"]
@@ -21,7 +22,7 @@ export function generateStaticParams() {
   return validCategories.map((slug) => ({ slug }))
 }
 
-export default function CategoryPage({ params }: { params: { slug: string } }) {
+export default async function CategoryPage({ params }: { params: { slug: string } }) {
   const { slug } = params
 
   // Check if the category exists
@@ -30,6 +31,14 @@ export default function CategoryPage({ params }: { params: { slug: string } }) {
   }
 
   const categoryName = categoryDisplayNames[slug] || slug
+
+  // Fetch news data server-side
+  const allNewsItems = await getNewsItems()
+  
+  // Filter news items by category
+  const categoryNewsItems = allNewsItems.filter(item => 
+    item.category.toLowerCase() === slug
+  )
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -54,7 +63,7 @@ export default function CategoryPage({ params }: { params: { slug: string } }) {
 
       <div className="flex flex-col md:flex-row gap-8">
         <div className="w-full md:w-2/3">
-          <NewsGrid />
+          <NewsGrid initialNewsItems={categoryNewsItems} />
           <div className="mt-8 flex justify-center">
             <Button variant="outline">Load More</Button>
           </div>

@@ -28,9 +28,16 @@ interface HeroNewsItem {
   slug: string;
 }
 
-export default function HeroSection() {
+// Props interface for HeroSection component
+interface HeroSectionProps {
+  initialHeroNews?: HeroNewsItem[];
+}
+
+export default function HeroSection({ initialHeroNews }: HeroSectionProps) {
   const [currentSlide, setCurrentSlide] = useState(0)
-  const [featuredNews, setFeaturedNews] = useState<HeroNewsItem[]>(defaultFeaturedNews)
+  const [featuredNews, setFeaturedNews] = useState<HeroNewsItem[]>(
+    initialHeroNews && initialHeroNews.length > 0 ? initialHeroNews : defaultFeaturedNews
+  )
 
   // Listen for news data from NewsGrid
   useEffect(() => {
