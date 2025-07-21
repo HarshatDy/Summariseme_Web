@@ -2,8 +2,9 @@
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
+  trailingSlash: false, // Ensure consistent trailing slash behavior
   images: {
-    domains: ['69.62.84.22', '127.0.0.1', 'your-production-domain.com', 'lh3.googleusercontent.com', 'storage.googleapis.com'], // Add your actual production domain when deploying
+    domains: ['69.62.84.22', '127.0.0.1', 'your-production-domain.com', 'lh3.googleusercontent.com', 'storage.googleapis.com'],
     remotePatterns: [
       {
         protocol: 'http',
@@ -11,7 +12,6 @@ const nextConfig = {
         port: '3001',
         pathname: '/**',
       },
-      // Add more remote patterns as needed for production
     ],
   },
 }

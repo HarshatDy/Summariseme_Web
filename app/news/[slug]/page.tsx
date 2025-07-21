@@ -78,6 +78,31 @@ export function generateStaticParams() {
   }))
 }
 
+export async function generateMetadata({ params }: { params: { slug: string } }) {
+  const article = articles.find((article) => article.slug === params.slug)
+  
+  if (!article) {
+    return {
+      title: 'Article Not Found',
+    }
+  }
+
+  const canonicalUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/news/${params.slug}`
+
+  return {
+    title: article.title,
+    description: article.content.substring(0, 160),
+    openGraph: {
+      title: article.title,
+      description: article.content.substring(0, 160),
+      url: canonicalUrl,
+    },
+    alternates: {
+      canonical: canonicalUrl,
+    },
+  }
+}
+
 export default function ArticlePage({ params }: { params: { slug: string } }) {
   const { slug } = params
   const article = articles.find((article) => article.slug === slug)

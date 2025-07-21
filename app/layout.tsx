@@ -12,6 +12,7 @@ const inter = Inter({ subsets: ["latin"] })
 export const metadata: Metadata = {
   title: "SummariseMe",
   description: "Stay informed with the latest news and updates",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'),
 }
 
 export default function RootLayout({
