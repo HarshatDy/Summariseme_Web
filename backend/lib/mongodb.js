@@ -1,8 +1,8 @@
 import { MongoClient } from 'mongodb';
 
 // Cache MongoDB client connection
-let cachedClient = null;
-let cachedDb = null;
+let cachedClient = new Map();
+let cachedDb = new Map();
 
 // Connect to MongoDB database
 export async function connectToDatabase(uri, dbName) {
@@ -18,8 +18,8 @@ export async function connectToDatabase(uri, dbName) {
   }
 
   // If we already have a cached connection, return it
-  if (cachedClient && cachedDb) {
-    return { client: cachedClient, db: cachedDb };
+  if (cachedClient.has(connectionString) && cachedDb.has(connectionString)) {
+    return { client: cachedClient.get(connectionString), db: cachedDb.get(connectionString) };
   }
 
   // Create a new MongoDB client and connect
@@ -32,8 +32,8 @@ export async function connectToDatabase(uri, dbName) {
   const db = client.db(database);
 
   // Cache the client and db connections
-  cachedClient = client;
-  cachedDb = db;
+  cachedClient.set(connectionString, client);
+  cachedDb.set(connectionString, db);
 
   return { client, db };
 }
