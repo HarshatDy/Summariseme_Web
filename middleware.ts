@@ -5,25 +5,31 @@ export function middleware(request: NextRequest) {
   const url = request.nextUrl.clone()
   const hostname = request.headers.get('host') || ''
   
-  // Force HTTPS in production
+  // Skip middleware for localhost development
+  // Comment this out to test canonicalization in development
+  if (hostname.includes('localhost') || hostname.includes('127.0.0.1')) {
+    return NextResponse.next()
+  }
+  
+  // Force HTTPS in production only
   if (process.env.NODE_ENV === 'production' && !request.headers.get('x-forwarded-proto')?.includes('https')) {
     url.protocol = 'https:'
     return NextResponse.redirect(url)
   }
   
-  // Remove www subdomain (or add it if you prefer www)
-  if (hostname.startsWith('www.')) {
+  // Remove www subdomain (only in production)
+  if (process.env.NODE_ENV === 'production' && hostname.startsWith('www.')) {
     url.hostname = hostname.replace('www.', '')
     return NextResponse.redirect(url)
   }
   
-  // Remove trailing slashes except for root
+  // Remove trailing slashes except for root (works in both dev and prod)
   if (url.pathname.length > 1 && url.pathname.endsWith('/')) {
     url.pathname = url.pathname.slice(0, -1)
     return NextResponse.redirect(url)
   }
   
-  // Force lowercase URLs
+  // Force lowercase URLs (works in both dev and prod)
   if (url.pathname !== url.pathname.toLowerCase()) {
     url.pathname = url.pathname.toLowerCase()
     return NextResponse.redirect(url)

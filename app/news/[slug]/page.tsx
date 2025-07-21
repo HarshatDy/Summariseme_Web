@@ -7,6 +7,7 @@ import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import Sidebar from "@/components/sidebar"
+import type { Metadata } from "next/types"
 
 // Sample article data - in a real app, this would come from a database or API
 const articles = [
@@ -78,27 +79,57 @@ export function generateStaticParams() {
   }))
 }
 
-export async function generateMetadata({ params }: { params: { slug: string } }) {
-  const article = articles.find((article) => article.slug === params.slug)
-  
+// Generate metadata for each article
+export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+  const { slug } = params
+  const article = articles.find((article) => article.slug === slug)
+
   if (!article) {
     return {
-      title: 'Article Not Found',
+      title: "Article Not Found",
     }
   }
 
-  const canonicalUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/news/${params.slug}`
+  const cleanContent = article.content.replace(/<[^>]*>/g, '').substring(0, 160)
+  const categoryLower = article.category.toLowerCase()
 
   return {
-    title: article.title,
-    description: article.content.substring(0, 160),
+    title: `${article.title} | ${article.category} News | SummariseMe`,
+    description: cleanContent,
+    keywords: [
+      article.title.toLowerCase().split(' ').slice(0, 5),
+      `${categoryLower} news`,
+      "breaking news",
+      "latest news",
+      "news article",
+      "current events"
+    ].flat(),
+    authors: [{ name: article.author.name }],
     openGraph: {
       title: article.title,
-      description: article.content.substring(0, 160),
-      url: canonicalUrl,
+      description: cleanContent,
+      type: 'article',
+      url: `/news/${slug}`,
+      images: [
+        {
+          url: article.image,
+          width: 1200,
+          height: 630,
+          alt: article.title,
+        },
+      ],
+      authors: [article.author.name],
+      publishedTime: article.date,
+      section: article.category,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: article.title,
+      description: cleanContent,
+      images: [article.image],
     },
     alternates: {
-      canonical: canonicalUrl,
+      canonical: `/news/${slug}`,
     },
   }
 }
@@ -111,93 +142,132 @@ export default function ArticlePage({ params }: { params: { slug: string } }) {
     notFound()
   }
 
+  const cleanContent = article.content.replace(/<[^>]*>/g, '')
+
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex flex-col md:flex-row gap-8">
-        <article className="w-full md:w-2/3">
-          <div className="mb-4">
-            <Link href={`/category/${article.category.toLowerCase()}`}>
-              <Badge variant="outline" className="mb-4">
-                {article.category}
-              </Badge>
-            </Link>
-            <h1 className="text-3xl md:text-4xl font-bold mb-4">{article.title}</h1>
-            <div className="flex items-center gap-4 mb-6">
-              <Avatar>
-                <AvatarImage src={article.author.image} alt={article.author.name} />
-                <AvatarFallback>{article.author.name.charAt(0)}</AvatarFallback>
-              </Avatar>
-              <div>
-                <div className="font-medium">{article.author.name}</div>
-                <div className="text-sm text-muted-foreground">{article.author.role}</div>
+    <>
+      {/* Add structured data for the article */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "NewsArticle",
+            "headline": article.title,
+            "description": cleanContent.substring(0, 200),
+            "image": article.image,
+            "author": {
+              "@type": "Person",
+              "name": article.author.name,
+              "jobTitle": article.author.role
+            },
+            "publisher": {
+              "@type": "Organization",
+              "name": "SummariseMe",
+              "logo": {
+                "@type": "ImageObject",
+                "url": `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/logo.png`
+              }
+            },
+            "datePublished": article.date,
+            "dateModified": article.date,
+            "mainEntityOfPage": {
+              "@type": "WebPage",
+              "@id": `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/news/${slug}`
+            },
+            "articleSection": article.category,
+            "wordCount": cleanContent.split(' ').length
+          })
+        }}
+      />
+      
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex flex-col md:flex-row gap-8">
+          <article className="w-full md:w-2/3">
+            <div className="mb-4">
+              <Link href={`/category/${article.category.toLowerCase()}`}>
+                <Badge variant="outline" className="mb-4">
+                  {article.category}
+                </Badge>
+              </Link>
+              <h1 className="text-3xl md:text-4xl font-bold mb-4">{article.title}</h1>
+              <div className="flex items-center gap-4 mb-6">
+                <Avatar>
+                  <AvatarImage src={article.author.image} alt={article.author.name} />
+                  <AvatarFallback>{article.author.name.charAt(0)}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <div className="font-medium">{article.author.name}</div>
+                  <div className="text-sm text-muted-foreground">{article.author.role}</div>
+                </div>
+              </div>
+              <div className="flex items-center text-sm text-muted-foreground mb-6">
+                <div className="flex items-center mr-4">
+                  <Calendar className="h-4 w-4 mr-1" />
+                  <span>{article.date}</span>
+                </div>
+                <div className="flex items-center">
+                  <Clock className="h-4 w-4 mr-1" />
+                  <span>{article.readTime}</span>
+                </div>
               </div>
             </div>
-            <div className="flex items-center text-sm text-muted-foreground mb-6">
-              <div className="flex items-center mr-4">
-                <Calendar className="h-4 w-4 mr-1" />
-                <span>{article.date}</span>
-              </div>
-              <div className="flex items-center">
-                <Clock className="h-4 w-4 mr-1" />
-                <span>{article.readTime}</span>
-              </div>
-            </div>
-          </div>
 
-          <div className="relative h-[400px] w-full mb-8">
-            <Image
-              src={article.image || "/placeholder.svg"}
-              alt={article.title}
-              fill
-              className="object-cover rounded-lg"
-              priority
+            <div className="relative h-[400px] w-full mb-8">
+              <Image
+                src={article.image || "/placeholder.svg"}
+                alt={article.title}
+                fill
+                className="object-cover rounded-lg"
+                priority
+              />
+            </div>
+
+            <div
+              className="prose prose-lg dark:prose-invert max-w-none mb-8"
+              dangerouslySetInnerHTML={{ __html: article.content }}
             />
-          </div>
 
-          <div
-            className="prose prose-lg dark:prose-invert max-w-none mb-8"
-            dangerouslySetInnerHTML={{ __html: article.content }}
-          />
+            <Separator className="my-8" />
 
-          <Separator className="my-8" />
-
-          <div className="flex justify-between items-center">
-            <div className="flex gap-2">
+            <div className="flex justify-between items-center">
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm">
+                  <ThumbsUp className="h-4 w-4 mr-2" />
+                  Like
+                </Button>
+                <Button variant="outline" size="sm">
+                  <MessageSquare className="h-4 w-4 mr-2" />
+                  Comment
+                </Button>
+                <Button variant="outline" size="sm">
+                  <Share2 className="h-4 w-4 mr-2" />
+                  Share
+                </Button>
+              </div>
               <Button variant="outline" size="sm">
-                <ThumbsUp className="h-4 w-4 mr-2" />
-                Like
-              </Button>
-              <Button variant="outline" size="sm">
-                <MessageSquare className="h-4 w-4 mr-2" />
-                Comment
-              </Button>
-              <Button variant="outline" size="sm">
-                <Share2 className="h-4 w-4 mr-2" />
-                Share
+                <Bookmark className="h-4 w-4 mr-2" />
+                Save
               </Button>
             </div>
-            <Button variant="outline" size="sm">
-              <Bookmark className="h-4 w-4 mr-2" />
-              Save
-            </Button>
-          </div>
 
-          <Separator className="my-8" />
+            <Separator className="my-8" />
 
-          <div>
-            <h3 className="text-xl font-bold mb-4">Comments</h3>
-            <div className="bg-muted/50 rounded-lg p-8 text-center">
-              <p className="text-muted-foreground mb-4">Join the conversation</p>
-              <Button>Sign in to comment</Button>
+            <div>
+              <h3 className="text-xl font-bold mb-4">Comments</h3>
+              <div className="bg-muted/50 rounded-lg p-8 text-center">
+                <p className="text-muted-foreground mb-4">Join the conversation</p>
+                <Button>Sign in to comment</Button>
+              </div>
             </div>
-          </div>
-        </article>
+          </article>
 
-        <div className="w-full md:w-1/3">
-          <Sidebar />
+          <div className="w-full md:w-1/3">
+            <Sidebar />
+          </div>
         </div>
       </div>
-    </div>
+    </>
   )
 }
 

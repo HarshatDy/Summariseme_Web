@@ -138,7 +138,7 @@ export default function HeroSection({ initialHeroNews }: HeroSectionProps) {
                       {news.category}
                     </span>
                   </div>
-                  <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2">{news.title}</h2>
+                  <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2">{news.title}</h1>
                   <p className="text-sm md:text-base mb-4 max-w-3xl">{news.summary}</p>
                   <Button
                     variant="secondary"

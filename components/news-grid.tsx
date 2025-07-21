@@ -1083,7 +1083,7 @@ const markAsRead = async (id: number, completed: boolean = false) => {
                       </div>
                     </div>
 
-                    <h3 className="font-bold text-base md:text-lg mb-auto line-clamp-3">{news.title}</h3>
+                    <h1 className="font-bold text-base md:text-lg mb-auto line-clamp-3">{news.title}</h1>
 
                     <p className="text-sm text-muted-foreground line-clamp-2 md:line-clamp-3 mt-2">
                       {news.summary.split("\n\n")[0]}
