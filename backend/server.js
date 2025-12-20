@@ -1775,6 +1775,7 @@ app.listen(PORT, hostname, () => {
   console.log(`   POST /api/envisage_web/view      - Increment view count for an item in envisage_web`);
   console.log(`   GET  /api/envisage_web/all       - Get all documents from envisage_web collection`);
   
+  console.log(`   GET  /api/hero_blogs       	   - Get all hero blogs for the HarshatyDy_Blogs collection`);
   console.log('\n💡 For frontend, configure .env.local with:');
   console.log(`   NEXT_PUBLIC_API_URL=${hostname}:${PORT}`);
   console.log('\n📋 Press Ctrl+C to stop the server');
